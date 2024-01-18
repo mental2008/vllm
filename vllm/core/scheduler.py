@@ -115,6 +115,7 @@ class Scheduler:
         return len(self.waiting) + len(self.running) + len(self.swapped)
 
     def _schedule(self) -> SchedulerOutputs:
+        logger.info(f"Invoked function: _schedule")
         # Blocks that need to be swaped or copied before model execution.
         blocks_to_swap_in: Dict[int, int] = {}
         blocks_to_swap_out: Dict[int, int] = {}
@@ -195,6 +196,10 @@ class Scheduler:
                 scheduled.append(seq_group)
 
             if scheduled or ignored_seq_groups:
+                logger.info(f"Stage: Prefill")
+                logger.info(f"Number of scheduled sequence groups: {len(scheduled)}")
+                logger.info(f"Number of batched tokens: {len(seq_lens) * max(seq_lens) if seq_lens else 0}")
+                logger.info(f"Number of paddings: {len(seq_lens) * max(seq_lens) - sum(seq_lens)}")
                 scheduler_outputs = SchedulerOutputs(
                     scheduled_seq_groups=scheduled,
                     prompt_run=True,
@@ -268,6 +273,9 @@ class Scheduler:
             seq_group.num_seqs(status=SequenceStatus.RUNNING)
             for seq_group in self.running)
 
+        logger.info(f"Stage: Decode")
+        logger.info(f"Number of scheduled sequence groups: {len(self.running)}")
+        logger.info(f"Number of batched tokens: {num_batched_tokens}")
         scheduler_outputs = SchedulerOutputs(
             scheduled_seq_groups=self.running,
             prompt_run=False,
@@ -280,6 +288,7 @@ class Scheduler:
         return scheduler_outputs
 
     def schedule(self) -> Tuple[List[SequenceGroupMetadata], SchedulerOutputs]:
+        logger.info(f"Invoked function: schedule")
         # Schedule sequence groups.
         # This function call changes the internal states of the scheduler
         # such as self.running, self.swapped, and self.waiting.

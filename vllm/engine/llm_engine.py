@@ -621,6 +621,7 @@ class LLMEngine:
         and updates the scheduler with the model outputs. Finally, it decodes
         the sequences and returns the newly generated results.
         """
+        logger.info(f"Invoked function: step")
         seq_group_metadata_list, scheduler_outputs = self.scheduler.schedule()
 
         if not scheduler_outputs.is_empty():
@@ -639,7 +640,31 @@ class LLMEngine:
         else:
             output = []
 
-        return self._process_model_outputs(output, scheduler_outputs)
+        step_outputs = self._process_model_outputs(output, scheduler_outputs)
+
+        logger.info(f"Number of waiting requests: {len(self.scheduler.waiting)}")
+        logger.info(f"Number of running requests: {len(self.scheduler.running)}")
+        logger.info(f"Number of swapped requests: {len(self.scheduler.swapped)}")
+        logger.info(f"Number of finished requests: {sum(output.finished for output in step_outputs)}")
+
+        total_num_gpu_blocks = self.cache_config.num_gpu_blocks
+        num_free_gpu_blocks = (
+            self.scheduler.block_manager.get_num_free_gpu_blocks())
+        num_used_gpu_blocks = total_num_gpu_blocks - num_free_gpu_blocks
+        gpu_cache_usage = num_used_gpu_blocks / total_num_gpu_blocks
+        logger.info(f"GPU KV cache usage: {gpu_cache_usage}")
+
+        total_num_cpu_blocks = self.cache_config.num_cpu_blocks
+        if total_num_cpu_blocks > 0:
+            num_free_cpu_blocks = (
+                self.scheduler.block_manager.get_num_free_cpu_blocks())
+            num_used_cpu_blocks = total_num_cpu_blocks - num_free_cpu_blocks
+            cpu_cache_usage = num_used_cpu_blocks / total_num_cpu_blocks
+        else:
+            cpu_cache_usage = 0.0
+        logger.info(f"CPU KV cache usage: {cpu_cache_usage}")
+
+        return step_outputs
 
     def _log_system_stats(
         self,

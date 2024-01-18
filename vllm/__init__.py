@@ -21,3 +21,5 @@ __all__ = [
     "AsyncEngineArgs",
     "initialize_cluster",
 ]
+
+print(f"[Test] Import vLLM.")
